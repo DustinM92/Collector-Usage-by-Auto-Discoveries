@@ -4,16 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Server Frequency Chart</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
+            font-family: Arial, sans-serif;
+            margin: 20px;
             background-color: #f5f5f5;
         }
         .container {
-            max-width: 1200px;
+            max-width: 1000px;
             margin: 0 auto;
             background: white;
             padding: 30px;
@@ -24,188 +22,115 @@
             color: #333;
             margin-top: 0;
         }
-        .subtitle {
-            color: #666;
-            margin-bottom: 30px;
+        .chart {
+            display: flex;
+            align-items: flex-end;
+            height: 400px;
+            border-bottom: 2px solid #333;
+            border-left: 2px solid #333;
+            padding: 20px 0;
+            gap: 5px;
+        }
+        .bar {
+            flex: 1;
+            background: #3b82f6;
+            position: relative;
+            transition: background 0.3s;
+            min-width: 20px;
+        }
+        .bar:hover {
+            background: #2563eb;
+        }
+        .bar-label {
+            position: absolute;
+            bottom: -40px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-45deg);
+            font-size: 11px;
+            white-space: nowrap;
+            transform-origin: left center;
+        }
+        .bar-value {
+            position: absolute;
+            top: -25px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            font-size: 12px;
         }
         .stats {
-            margin-top: 20px;
+            margin-top: 60px;
             color: #666;
             font-size: 14px;
-        }
-        canvas {
-            max-height: 500px;
         }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Server Frequency Distribution</h1>
-        <p class="subtitle">Count of occurrences for each server</p>
-        <canvas id="myChart"></canvas>
+        <p style="color: #666;">Count of occurrences for each server</p>
+        <div class="chart" id="chart"></div>
         <div class="stats" id="stats"></div>
     </div>
 
     <script>
-        // Data processing
-        const rawData = `N/A
-vslgdclp03
-vslgdclp03
-vslgdclp03
-vslgdclp03
-vslgdclp04
-vslgdclp05
-vslgdclp05
-vslgdclp05
-vslgdclp05
-vslgdclp05
-vslgdclp06
-vslgdclp06
-vslgdclp06
-vslgdclp06
-vslgdclp07
-vslgdclp07
-vslgdclp08
-vslgdclp08
-vslgdclp09
-vslgdclp09
-vslgdclp10
-vslgdclp10
-vslgdclp10
-vslgdclp10
-vslgdclp10
-vslgdclp10
-vslgdclp10
-vslgdclp10
-vslgdclp11
-vslgdclp11
-vslgdclp11
-vslgdclp11
-vslgdclp11
-vslgdclp12
-vslgdclp12
-vslgdclp12
-vslgdclp12
-vslgdclp12
-vslgdclp12
-vslgdclp12
-vslgdclp12
-vslgdclp13
-vslgdclp13
-vslgdclp13
-vslgdclp13
-vslgdclp13
-vslgdclp14
-vslgdclp14
-vslgdclp15
-vslgdclp15
-vslgdclp15
-vslgdclp15
-vslgdclp15
-vslgdclp15
-vslgdclp15
-vslgdclp16
-vslgdclp16
-vslgdclp17
-vslgdclp17
-vslgdclp17
-vslgdclp17
-vslgdclp17
-vslgdclp18
-vslgdclp19
-vslgdclp20
-vslgdclp20
-vslgdclp20
-vslgdclp20
-vslgdclp21
-vslgdclp22
-vslgdclp23
-vslgdclp23
-vslgdclp23
-vslgdclp23
-vslgdclp24
-vslgdclp24
-vslgdclp25
-vslgdclp25
-vslgdclp26
-vslgdclp26`;
+        const data = {
+            'N/A': 1,
+            'vslgdclp03': 4,
+            'vslgdclp04': 1,
+            'vslgdclp05': 5,
+            'vslgdclp06': 4,
+            'vslgdclp07': 2,
+            'vslgdclp08': 2,
+            'vslgdclp09': 2,
+            'vslgdclp10': 8,
+            'vslgdclp11': 5,
+            'vslgdclp12': 8,
+            'vslgdclp13': 5,
+            'vslgdclp14': 2,
+            'vslgdclp15': 7,
+            'vslgdclp16': 2,
+            'vslgdclp17': 5,
+            'vslgdclp18': 1,
+            'vslgdclp19': 1,
+            'vslgdclp20': 4,
+            'vslgdclp21': 1,
+            'vslgdclp22': 1,
+            'vslgdclp23': 4,
+            'vslgdclp24': 2,
+            'vslgdclp25': 2,
+            'vslgdclp26': 2
+        };
 
-        const frequencies = {};
-        const items = rawData.split('\n');
+        const maxValue = Math.max(...Object.values(data));
+        const chart = document.getElementById('chart');
+        const colors = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#06b6d4'];
         
-        items.forEach(item => {
-            const trimmed = item.trim();
-            if (trimmed) {
-                frequencies[trimmed] = (frequencies[trimmed] || 0) + 1;
-            }
+        let totalEntries = 0;
+        Object.values(data).forEach(v => totalEntries += v);
+
+        Object.entries(data).forEach(([server, count], index) => {
+            const bar = document.createElement('div');
+            bar.className = 'bar';
+            bar.style.height = `${(count / maxValue) * 100}%`;
+            bar.style.background = colors[index % colors.length];
+            bar.title = `${server}: ${count} occurrences`;
+            
+            const label = document.createElement('div');
+            label.className = 'bar-label';
+            label.textContent = server;
+            
+            const value = document.createElement('div');
+            value.className = 'bar-value';
+            value.textContent = count;
+            
+            bar.appendChild(label);
+            bar.appendChild(value);
+            chart.appendChild(bar);
         });
 
-        // Sort by server name
-        const sortedEntries = Object.entries(frequencies).sort((a, b) => a[0].localeCompare(b[0]));
-        const labels = sortedEntries.map(entry => entry[0]);
-        const data = sortedEntries.map(entry => entry[1]);
-
-        // Generate colors
-        const colors = [
-            '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', 
-            '#06b6d4', '#6366f1', '#f43f5e', '#eab308', '#14b8a6'
-        ];
-        const backgroundColors = labels.map((_, i) => colors[i % colors.length]);
-
-        // Create chart
-        const ctx = document.getElementById('myChart').getContext('2d');
-        const myChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Occurrences',
-                    data: data,
-                    backgroundColor: backgroundColors,
-                    borderWidth: 0,
-                    borderRadius: 6
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        display: true,
-                        position: 'top'
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.dataset.label + ': ' + context.parsed.y + ' occurrences';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            stepSize: 1
-                        },
-                        title: {
-                            display: true,
-                            text: 'Count'
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            maxRotation: 45,
-                            minRotation: 45
-                        }
-                    }
-                }
-            }
-        });
-
-        // Display stats
         document.getElementById('stats').textContent = 
-            `Total entries: ${items.length} | Unique servers: ${labels.length}`;
+            `Total entries: ${totalEntries} | Unique servers: ${Object.keys(data).length}`;
     </script>
 </body>
 </html>
